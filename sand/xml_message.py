@@ -38,20 +38,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from os.path import dirname, join
 from lxml import etree
 
-class XMLValidtor:
+class XMLValidator:
 
-    sand_messsage_xsd = "./schemas/sand_messages.xsd"
+    sand_message_xsd = "./schemas/sand_messages.xsd"
 
     def __init__(self):
-        xsd_path = join(dirname(__file__))
-        with open(self.sand_message_xsd) as f: 
+        xsd_path = join(dirname(__file__), self.sand_message_xsd)
+        with open(xsd_path) as f:
             sand_schema_doc = etree.parse(f)
             self.sand_xml_schema = etree.XMLSchema(sand_schema_doc)
 
-    def from_file(message_file):
+    def from_file(self, message_file):
         message = etree.parse(message_file)
         return self.sand_xml_schema.validate(message)
 
-    def from_string(message_string):
+    def from_string(self, message_string):
         message = etree.fromstring(message_string)
         return sand_schema.assertValid(message)
