@@ -52,9 +52,6 @@ uri_encoded = r'%[A-Fa-f0-9]{2}'
 regular_expressions = {
     'QUOTEDSTRING': re.compile(r'"(\\"|[^"])*"'),
     'QUOTEDURI': re.compile(r'("%s:(%s|%s)+")|("(%s|%s)+")' % (uri_proto, uri_allowed, uri_encoded, uri_allowed, uri_encoded)),
-    # TODO: we have no example of TOKEN in HTTP headers
-    # the exact expression should be refined.
-    'TOKEN': re.compile(r'[a-zA-Z0-9]+'),
     'INT': re.compile(r'\d+'),
     # TODO: do we accept empty start for 0 in a range?
     'BYTERANGE': re.compile(r'\d+-\d*'),
