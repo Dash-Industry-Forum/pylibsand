@@ -183,19 +183,28 @@ class HeaderSyntaxChecker:
                     self.add_error("Expecting '=' for sand-attribute%s." % number_text)
                 # Check attribute name is well formed
                 if not attr_name.isalpha():
-                    # TODO: make a special case for white space
-                    self.add_error("sand-attribute name should be alphabetic%s." % number_text)
+                    if attr_name.strip().isalpha():
+                        self.add_error("no space allowed around sand-attribute name%s." % number_text)
+                    else:
+                        self.add_error("sand-attribute name should be alphabetic%s." % number_text)
                 item_length += len(attr_name)
                 # Check we have something to parse for the value
-                if right is not None and not right:
+                if right is not None and not right.strip():
                     self.add_error("Empty value for sand-attribute after '='%s." % number_text)
                 # Check it is an expected attribute
+                attr_name = attr_name.strip() # Already checked white space
                 if attr_name not in syntax:
                     self.add_error("Unexpected sand-attribute name '%s'%s. Stopping parsing." % (attr_name, number_text))
                     raise ParsingStopped
                 # Parse the value
-                value = self.check_value(syntax[attr_name], input[item_length:])
-                item_length += value.char_count
+                if right is not None:
+                    if right.strip():
+                        value = self.check_value(syntax[attr_name], input[item_length:])
+                        item_length += value.char_count
+                    else:
+                        # empty value already signalled, do not parse
+                        value = SandValue()
+                        item_length += len(right)
                 # Attributes must be unique
                 if hasattr(result, attr_name):
                     self.add_error("sand-attribute %s should occur only once%s." % (attr_name, number_text))
@@ -275,8 +284,6 @@ class HeaderSyntaxChecker:
         Returns the corresponding SandValue or raises ParsingStopped.
         The returned SandValue has its attribute char_count indicating how many
         characters where used from input."""
-        # We require the caller to pass some input
-        assert(input)
         result = SandValue()
         # Most work is done thanks to the regexp associated to this type:
         match = regular_expressions[expected_type].match(input)
