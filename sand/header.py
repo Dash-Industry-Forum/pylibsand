@@ -59,8 +59,6 @@ regular_expressions = {
     # TODO: do we accept empty start for 0 in a range?
     'BYTERANGE': re.compile(r'\d+-\d*'),
     'DATETIME': re.compile(r'\d\d\d\d\d\d\d\dT\d\d\d\d\d\d(\.\d{,6})?Z'),
-    # Extension to DIS syntax, for ClientCapabilities
-    # TODO: obtain the final specification
     'LIST': re.compile(r'\[(\d+(,\d+)*)?\]'),
 }
 # A regexp that allows to 'eat' characters that may belong to a DATETIME.
