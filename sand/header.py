@@ -53,8 +53,7 @@ regular_expressions = {
     'QUOTEDSTRING': re.compile(r'"(\\"|[^"])*"'),
     'QUOTEDURI': re.compile(r'("%s:(%s|%s)+")|("(%s|%s)+")' % (uri_proto, uri_allowed, uri_encoded, uri_allowed, uri_encoded)),
     'INT': re.compile(r'\d+'),
-    # TODO: do we accept empty start for 0 in a range?
-    'BYTERANGE': re.compile(r'\d+-\d*'),
+    'BYTERANGE': re.compile(r'(\d+-\d*)|(-\d+)'),
     'DATETIME': re.compile(r'\d\d\d\d\d\d\d\dT\d\d\d\d\d\d(\.\d{,6})?Z'),
     'LIST': re.compile(r'\[(\d+(,\d+)*)?\]'),
 }
@@ -199,7 +198,7 @@ class HeaderSyntaxChecker:
                 # Parse the value
                 if right is not None:
                     if right.strip():
-                        value = self.check_value(syntax[attr_name], input[item_length:])
+                        value = self.check_value(syntax[attr_name], input[item_length:], number_text)
                         item_length += value.char_count
                     else:
                         # empty value already signalled, do not parse
@@ -277,7 +276,7 @@ class HeaderSyntaxChecker:
             result.char_count += 1
         return result
     
-    def check_value(self, expected_type, input):
+    def check_value(self, expected_type, input, message_suffix):
         """Performs the syntax check when a sand-value is expected.
         expected_type: the name of the type expected for the value.
         input: string to parse (starts with the value, but may contain more at the end)
@@ -290,6 +289,11 @@ class HeaderSyntaxChecker:
         if match:
             # Correct value
             result.data = match.group(0)
+            # Additional check:
+            if expected_type == 'BYTERANGE':
+                left, right = result.data.split('-')
+                if left and right and int(left) > int(right):
+                    self.add_error("Inconsistent byte range (%s > %s)%s." % (left, right, message_suffix))
         else:
             # Wrong value
             if expected_type == 'DATETIME':
@@ -299,7 +303,7 @@ class HeaderSyntaxChecker:
                 match = datetime_allowed_chars.match(input)
                 if match:
                     result.data = match.group(0)
-            self.add_error("Wrong or missing %s specification." % expected_type)
+            self.add_error("Wrong or missing %s specification%s." % (expected_type, message_suffix))
         result.char_count = len(result.data)
         return result
     
