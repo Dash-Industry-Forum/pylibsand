@@ -58,16 +58,18 @@ regular_expressions = {
     'INT': re.compile(r'\d+'),
     # TODO: do we accept empty start for 0 in a range?
     'BYTERANGE': re.compile(r'\d+-\d*'),
-    'DATETIME': re.compile(r'\d\d\d\d\-\d\d\-\d\dT\d\d:\d\d:\d\d(\.\d{,6})?Z'),
+    'DATETIME': re.compile(r'\d\d\d\d\d\d\d\dT\d\d\d\d\d\d(\.\d{,6})?Z'),
     # Extension to DIS syntax, for ClientCapabilities
     # TODO: obtain the final specification
     'LIST': re.compile(r'\[(\d+(,\d+)*)?\]'),
 }
 # A regexp that allows to 'eat' characters that may belong to a DATETIME.
 # This is used in case the DATETIME is wrongly written, e.g. one missing char
-# example: 2016-0601T12:00:00Z has a missing dash, but this regexp allows to
-# recognize all the string as 'wrong datetime', instead of stopping at 6th character
-# and failing again because other characters will not match another expected attribute.
+# or the extended format allowed by ISO (but restricted by SAND).
+# example: 2016-06-01T12:00:00Z is correct ISO date but not SAND allowed,
+# but this regexp allows to recognize all the string as 'wrong datetime',
+# instead of stopping at 5th character and failing again because other
+# characters will not match another expected attribute.
 datetime_allowed_chars = re.compile(r'[\d\-T:\.Z]+')
 
 class SandObject:
