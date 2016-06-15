@@ -39,6 +39,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import re
 from UserList import UserList
 
+# Some checks considered as potentially useful are not part of official MPEG conformance.
+# However the code is kept available for those who want to reuse this module
+# in an extended context. The following dictionary can be adapted to this purpose.
+# For strict MPEG conformance all flags should be False.
+extended_checks = {
+    'weight present if strategy requires': False,
+}
+
 # URI regexps taken from
 # http://blog.dieweltistgarnichtso.net/constructing-a-regular-expression-that-matches-uris
 # regexp for the protocol part of an URI:
@@ -366,16 +374,18 @@ class SharedResourceAllocationChecker(HeaderSyntaxChecker):
         if o:
             if not o.list:
                 self.add_error("At least one operation point must be specified.")
-            try:
-                strategy = o.allocationStrategy
-                if strategy in ('"urn:mpeg:dash:sand:allocation:premium-privileged:2016"',
-                                '"urn:mpeg:dash:sand:allocation:everybody-served:2016"',
-                                '"urn:mpeg:dash:sand:allocation:weighted:2016"'):
-                    if not hasattr(o, 'weight'):
-                        self.add_error("Attribute weight is mandatory for strategy %s." % strategy)
-            except AttributeError:
-                # no allocation strategy specified
-                pass
+            # checking that values necessary for some strategy are indeed provided
+            if extended_checks['weight present if strategy requires']:
+                try:
+                    strategy = o.allocationStrategy
+                    if strategy in ('"urn:mpeg:dash:sand:allocation:premium-privileged:2016"',
+                                    '"urn:mpeg:dash:sand:allocation:everybody-served:2016"',
+                                    '"urn:mpeg:dash:sand:allocation:weighted:2016"'):
+                        if not hasattr(o, 'weight'):
+                            self.add_error("Attribute weight is mandatory for strategy %s." % strategy)
+                except AttributeError:
+                    # no allocation strategy specified
+                    pass
             if o.list and False: # TODO: if approved check (noted in specification) then remove the False to activate check
                 # Check that provided attributes are consistent through the list:
                 syntax = self.syntax['list']
