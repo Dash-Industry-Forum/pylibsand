@@ -45,6 +45,7 @@ from UserList import UserList
 # For strict MPEG conformance all flags should be False.
 extended_checks = {
     'weight present if strategy requires': False,
+    'operation points have consistent attribute list': False,
 }
 
 # URI regexps taken from
@@ -386,7 +387,7 @@ class SharedResourceAllocationChecker(HeaderSyntaxChecker):
                 except AttributeError:
                     # no allocation strategy specified
                     pass
-            if o.list and False: # TODO: if approved check (noted in specification) then remove the False to activate check
+            if o.list and extended_checks['operation points have consistent attribute list']:
                 # Check that provided attributes are consistent through the list:
                 syntax = self.syntax['list']
                 attributes = self.optional_attributes(o.list[0], syntax)
