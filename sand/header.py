@@ -327,8 +327,8 @@ class AnticipatedRequestsChecker(HeaderSyntaxChecker):
         HeaderSyntaxChecker.__init__(
             self, 
             { MANDATORY: ('list',),
-              'list': { MANDATORY: ('sourceURL', 'targetTime'),
-                        'sourceURL': 'QUOTEDURI',
+              'list': { MANDATORY: ('sourceUrl', 'targetTime'),
+                        'sourceUrl': 'QUOTEDURI',
                         'range': 'BYTERANGE',
                         'targetTime': 'DATETIME' } })
 
@@ -356,7 +356,7 @@ class SharedResourceAllocationChecker(HeaderSyntaxChecker):
                         'minBufferTime': 'INT' },
               'weight': 'INT',
               'allocationStrategy': 'QUOTEDURI',
-              'mpdURL': 'QUOTEDURI' })
+              'mpdUrl': 'QUOTEDURI' })
 
     def check_syntax(self, input):
         """Checks the input string conforms to SAND-ResourceAllocation syntax."""
@@ -394,8 +394,8 @@ class AcceptedAlternativesChecker(HeaderSyntaxChecker):
         HeaderSyntaxChecker.__init__(
             self, 
             { MANDATORY: ('list',),
-              'list': { MANDATORY: ('sourceURL',),
-                        'sourceURL': 'QUOTEDURI',
+              'list': { MANDATORY: ('sourceUrl',),
+                        'sourceUrl': 'QUOTEDURI',
                         'range': 'BYTERANGE',
                         'bandwidth': 'INT',
                         'deliveryScope': 'INT' } })
@@ -452,8 +452,8 @@ class NextAlternativesChecker(HeaderSyntaxChecker):
         HeaderSyntaxChecker.__init__(
             self,
             { MANDATORY: ('list',),
-              'list': { MANDATORY: ('sourceURL',),
-                        'sourceURL': 'QUOTEDURI',
+              'list': { MANDATORY: ('sourceUrl',),
+                        'sourceUrl': 'QUOTEDURI',
                         'range': 'BYTERANGE',
                         'bandwidth': 'INT',
                         'deliveryScope': 'INT' } })
@@ -503,8 +503,8 @@ class DeliveredAlternativeChecker(HeaderSyntaxChecker):
         """Build the syntax description for this message"""
         HeaderSyntaxChecker.__init__(
             self,
-            { MANDATORY: ('initialURL', 'contentLocation'),
-              'initialURL': 'QUOTEDURI',
+            { MANDATORY: ('initialUrl', 'contentLocation'),
+              'initialUrl': 'QUOTEDURI',
               'contentLocation': 'QUOTEDURI' })
 
 class BwInformationChecker(HeaderSyntaxChecker):
