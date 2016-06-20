@@ -503,31 +503,6 @@ class DeliveredAlternativeChecker(HeaderSyntaxChecker):
               'initialURL': 'QUOTEDURI',
               'contentLocation': 'QUOTEDURI' })
 
-class BwInformationChecker(HeaderSyntaxChecker):
-    """Class to check a SAND-BwInformation header message."""
-    
-    def __init__(self):
-        """Build the syntax description for this message"""
-        HeaderSyntaxChecker.__init__(
-            self,
-            { MANDATORY: (),
-              'minBandwidth': 'INT',
-              'maxBandwidth': 'INT' })
-
-    def check_syntax(self, input):
-        """Checks the input string conforms to SAND-BwInformation syntax."""
-        # Generic checking:
-        o = HeaderSyntaxChecker.check_syntax(self, input)
-        # Additional checks
-        if o:
-            if not hasattr(o, 'minBandwidth') and not hasattr(o, 'maxBandwidth'):
-                self.add_error("At least one of minBandwidth or maxBandwidth should be specified.")
-            if hasattr(o, 'minBandwidth') and hasattr(o, 'maxBandwidth'):
-                minBW = int(o.minBandwidth)
-                maxBW = int(o.maxBandwidth)
-                if maxBW < minBW:
-                    self.add_error("The value of maxBandwidth should be greater or equal than minBandwidth.")
-        return o
 
 # This dictionary maps header names to an object to use for checking the value.
 # We use lower cased values of header names, since HTTP headers are case-insensitive
@@ -541,7 +516,6 @@ header_name_to_checker = {
   'sand-nextalternatives': NextAlternativesChecker(),
   'sand-clientcapabilities': ClientCapabilitiesChecker(),
   'sand-deliveredalternative': DeliveredAlternativeChecker(),
-  'sand-bwinformation': BwInformationChecker(),
 }
 
 def check_header(name, value):
