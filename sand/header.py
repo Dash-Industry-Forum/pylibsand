@@ -61,6 +61,7 @@ uri_encoded = r'%[A-Fa-f0-9]{2}'
 regular_expressions = {
     'QUOTEDSTRING': re.compile(r'"(\\"|[^"])*"'),
     'QUOTEDURI': re.compile(r'("%s:(%s|%s)+")|("(%s|%s)+")' % (uri_proto, uri_allowed, uri_encoded, uri_allowed, uri_encoded)),
+    'QUOTEDURN': re.compile(r'("urn:(%s|%s)+")' % (uri_allowed, uri_encoded)),
     'INT': re.compile(r'\d+'),
     'BYTERANGE': re.compile(r'(\d+-\d*)|(-\d+)'),
     'DATETIME': re.compile(r'\d\d\d\d\d\d\d\dT\d\d\d\d\d\d(\.\d{,6})?Z'),
@@ -364,7 +365,7 @@ class SharedResourceAllocationChecker(HeaderSyntaxChecker):
                         'quality': 'INT',
                         'minBufferTime': 'INT' },
               'weight': 'INT',
-              'allocationStrategy': 'QUOTEDURI',
+              'allocationStrategy': 'QUOTEDURN',
               'mpdUrl': 'QUOTEDURI' })
 
     def check_syntax(self, input):
@@ -482,13 +483,21 @@ class NextAlternativesChecker(HeaderSyntaxChecker):
 class ClientCapabilitiesChecker(HeaderSyntaxChecker):
     """Class to check a SAND-ClientCapabilities header message."""
     
+    known_urns = {
+        'urn:mpeg:dash:sand:messageset:all:2016': map(str, range(1, 22)),
+    }
+
     def __init__(self):
         """Build the syntax description for this message"""
+        # Consistency check: know_urns should never reference reserved code 0
+        for codes in known_urns.values():
+            assert('0' not in codes)
+
         HeaderSyntaxChecker.__init__(
             self,
             { MANDATORY: (),
               'supportedMessage': 'LIST',
-              'messageSetUri': 'QUOTEDURI' })
+              'messageSetUri': 'QUOTEDURN' })
 
     def check_syntax(self, input):
         """Checks the input string conforms to SAND-ClientCapabilities syntax."""
@@ -496,17 +505,30 @@ class ClientCapabilitiesChecker(HeaderSyntaxChecker):
         o = HeaderSyntaxChecker.check_syntax(self, input)
         # Additional checks
         if o:
+            # Collect all supported codes from both types of parameters
+            supported_codes = set() # collects the identifier codes of supported messages
+            if hasattr(o, 'messageSetUri'):
+                if o.messageSetUri in self.known_urns:
+                    # add known identifiers to the set:
+                    for code in self.known_urns[o.messageSetUri]:
+                        supported_codes.add(code)
+                else:
+                    self.add_error("messageSetUri %s is not a known urn" % o.messageSetUri)
+                    # assuming the urn is defined elsewhere and has a consistent content,
+                    # we add the code '12' here to avoid issuing a new error message below,
+                    # (this additional error would be misleading if the urn is correct)
+                    supported_codes.add('12')
             if hasattr(o, 'supportedMessage'):
-                codes = o.supportedMessage[1:-1].split(',')
-                if '0' in codes:
-                    self.add_error("supportedMessage should not include reserved code 0")
-                # Currently the only defined messageSetURI includes all values
-                # thus we assume if it is present that 12 can be omitted from supportedMessages
-                # When new messageSets will be defined, refinement would be useful.
-                if '12' not in codes and not hasattr(o, 'messageSetUri'):
-                    self.add_error("supportedMessage must include code 12 (ClientCapabilities)")
-            elif not hasattr(o, 'messageSetUri'):
+                for code in o.supportedMessage[1:-1].split(','):
+                    supported_codes.add(code)
+            # Do we have some values?
+            if not hasattr(o, 'supportedMessage') and not hasattr(o, 'messageSetUri'):
                 self.add_error("At least one of supportedMessage or messageSetUri should be specified.")
+            # Check specific codes
+            if '0' in supported_codes:
+                self.add_error("supportedMessage should not include reserved code 0")
+            if '12' not in supported_codes:
+                self.add_error("At least one of the parameters must include code 12 (ClientCapabilities)")
         return o
 
 class DeliveredAlternativeChecker(HeaderSyntaxChecker):
@@ -516,9 +538,16 @@ class DeliveredAlternativeChecker(HeaderSyntaxChecker):
         """Build the syntax description for this message"""
         HeaderSyntaxChecker.__init__(
             self,
-            { MANDATORY: ('initialUrl', 'contentLocation'),
+            { MANDATORY: ('contentLocation',),
               'initialUrl': 'QUOTEDURI',
               'contentLocation': 'QUOTEDURI' })
+
+    def check_syntax(self, input):
+        """Checks the input string conforms to SAND-DeliveredAlternative syntax."""
+        # Generic checking:
+        o = HeaderSyntaxChecker.check_syntax(self, input)
+        # No additional checks
+        return o
 
 
 # This dictionary maps header names to an object to use for checking the value.
@@ -603,12 +632,12 @@ def check_headers(header_list):
             elif warning != expected_warning:
                 errors.append('A Warning header with "%s" is expected' % expected_warning)
             if not location:
-                errors.append('Mandatory ContentLocation header missing for DelivedAlternative.')
+                errors.append('Mandatory ContentLocation header missing for DeliveredAlternative.')
             elif hasattr(sand_object, 'contentLocation'):
                 if sand_object.contentLocation.strip('"') != location: # TODO we may have part of the URL?
                     errors.append('ContentLocation header and contentLocation@DeliveredAlternative are not consistent.')
             if not vary:
-                errors.append('Mandatory Vary header missing for DelivedAlternative.')
+                errors.append('Mandatory Vary header missing for DeliveredAlternative.')
             elif vary != expected_vary:
                 errors.append('The Vary header should mention %s for a DeliveredAlternative.' % expected_vary)
         result.append((name, errors))
