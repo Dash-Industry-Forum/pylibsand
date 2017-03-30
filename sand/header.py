@@ -120,10 +120,29 @@ class HeaderSyntaxChecker:
     - syntax: a dictionary describing expected structure and types
     - errors: a list of error messages found during parsing"""
 
+    # Attributes that may appear as part of the enveloppe.
+    # Note: it is not currently clearly stated in the spec how these are used with HTTP headers
+    #       since the enveloppe is supposed to be shared by multiple messages
+    #       and we put one SAND message into one HTTP HEADER
+    # We assume that they will be inserted in every header where needed (introducing duplication)
+    enveloppe_attributes = { MANDATORY: (),
+                             'senderId': 'QUOTEDSTRING',
+                             'generationTime' : 'DATETIME' }
+    
+    # Attributes that may belong to any message
+    common_attributes = { MANDATORY: (),
+                          'messageId' : 'INT',
+                          'validityTime': 'DATETIME' }
+
     def __init__(self, syntax):
-        """Constructor. Just store the syntax descriptor."""
+        """Constructor.
+        Store the syntax descriptor.
+        Initialize internal attributes used during parsing."""
         self.syntax = syntax
         self.errors = []
+        # The following flags are used to check rule in 8.2.3 on attributes ordering
+        self.enveloppe_done = False
+        self.common_done = False
 
     def add_error(self, msg):
         """Adds the msg to the list of errors."""
@@ -139,8 +158,19 @@ class HeaderSyntaxChecker:
         If parsing went to the end correctly or with non fatal errors,
         returns the SandObject describing the found content."""
         self.clear_errors()
+        self.enveloppe_done = False
+        self.common_done = False
+        syntax = {} # start a new dictionary (do not modify existing ones)
+        # Build a syntax description including all possible attributes
+        # (note: the calls to update will overwrite MANDATORY entry each time)
+        syntax.update(self.enveloppe_attributes)
+        syntax.update(self.common_attributes)
+        syntax.update(self.syntax)
+        # build MANDATORY key at the end, since updates are overwriting it:
+        mandatory = self.syntax[MANDATORY] + self.enveloppe_attributes[MANDATORY] + self.common_attributes[MANDATORY]
+        syntax[MANDATORY] = mandatory
         try:
-            result = self.check_object(self.syntax, input, first_level=True)
+            result = self.check_object(syntax, input, first_level=True)
         except ParsingStopped:
             result = None
         return result
@@ -217,6 +247,18 @@ class HeaderSyntaxChecker:
                 # Attributes must be unique
                 if hasattr(result, attr_name):
                     self.add_error("sand-attribute %s should occur only once%s." % (attr_name, number_text))
+                # Enveloppe and common attributes must appear before others
+                # (but nothing says in the spec that enveloppe should be before common attributes)
+                if attr_name in self.enveloppe_attributes:
+                    if self.enveloppe_done or not first_level:
+                        self.add_error("Enveloppe attributes (%s) should appear first in the message." % attr_name)
+                elif attr_name in self.common_attributes:
+                    if self.common_done or not first_level:
+                        self.add_error("Common attributes (%s) should appear first in the message." % attr_name)
+                else:
+                    # If we see another attribute, then enveloppe+common is done
+                    self.enveloppe_done = True
+                    self.common_done = True
                 setattr(result, attr_name, value.data)
             # Now that one item has been parsed, prepare for the next
             # move to remaining input:
@@ -483,14 +525,14 @@ class NextAlternativesChecker(HeaderSyntaxChecker):
 class ClientCapabilitiesChecker(HeaderSyntaxChecker):
     """Class to check a SAND-ClientCapabilities header message."""
     
-    known_urns = {
-        'urn:mpeg:dash:sand:messageset:all:2016': map(str, range(1, 22)),
+    known_urns = { # QUOTEDXXX parsing leaves the " in the value, so we include them here
+        '"urn:mpeg:dash:sand:messageset:all:2016"': map(str, range(1, 22)),
     }
 
     def __init__(self):
         """Build the syntax description for this message"""
         # Consistency check: know_urns should never reference reserved code 0
-        for codes in known_urns.values():
+        for codes in self.known_urns.values():
             assert('0' not in codes)
 
         HeaderSyntaxChecker.__init__(
