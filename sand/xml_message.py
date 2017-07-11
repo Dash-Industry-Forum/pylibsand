@@ -71,7 +71,7 @@ class XMLValidator:
         is_valid = False
         try:
             parser = etree.XMLParser(schema = self.sand_xml_schema)
-            etree.fromstring(message_string, parser)
+            etree.fromstring(message_string.encode('utf-8'), parser)
             # If execution passes, XML schema validation succeeded
             message_doc = etree.parse(message_string)
             is_valid = self.sand_schematron.validate(message_doc)
